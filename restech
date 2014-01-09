@@ -1,0 +1,17 @@
+#!/bin/bash -e
+
+# displays whose site you're located on in admindev
+
+case $1 in 
+	-h)
+	  echo "displays whose site you're located in on the admindev network drive"
+	  echo "[ this script assumes you used the default options on mntdev ]"
+	  ;;	
+	*)
+	  if [[ ! $(pwd) =~ "/mnt/admindev/" ]]; then
+		echo "on local machine's tree"
+	  else
+	  	pwd | cut -d/ -f4
+	  fi
+	  ;;
+esac

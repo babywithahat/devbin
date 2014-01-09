@@ -1,0 +1,98 @@
+#!/bin/bash
+
+USER=""
+MNTPNT="/mnt/admindev"
+DRIVE="//admindev/shared/www/rad"
+MOUNTED=$([[ $(mount | grep admindev) == "" ]])
+
+function usage()
+{
+	echo
+	echo "mount admindev's cifs drive"
+	echo "usage: $0 <user>" 
+	echo
+	echo "	-d <drive>	choose an alternative drive to mount"
+	echo "	-h		print help"
+	echo "	-m <mountpoint> explicitly set a place to mount the drive"
+	echo
+}
+
+
+function evalargs()
+{
+	if [[ $@ == "" ]]; then
+		usage
+		exit 1	
+	fi
+
+	while getopts hd: opt; do
+		case $opt in
+		h)
+			usage
+			exit 1
+			;;
+		d)
+			DRIVE=$OPTARG
+			;;
+		m)
+			MNTPNT=$OPTARG
+			;;
+		esac
+	done
+	shift $((OPTIND - 1))
+
+	# check to see if //admindev is already mounted
+	if [[ $(mount | grep admindev) != "" ]]; then
+		MNTPNT=$(mount | grep admindev | cut -d ' ' -f 3)	
+		failure unable to mount "(already mounted on $MNTPNT)"
+		exit 1
+	fi
+	
+
+	USER=$1
+
+}
+
+function mountdev()
+{
+	OLDUID=$(id -u)
+	notify mounting $DRIVE onto $MNTPNT ... 
+	notify invoking sudo to mount //admindev/shared ... 
+	MESG=$(sudo mount -t cifs $DRIVE $MNTPNT -o user=$USER -o uid=$OLDUID -o gid=$OLDUID 2>&1)
+    sudo -k 
+	if [[ $? != 0 ]]; then
+		failure unable to mount
+		echo
+		echo $MESG
+		echo 
+	else
+		success mounted $DRIVE on $MNTPNT	
+	fi
+
+}
+
+function success()
+{
+	ARGS="$@"	
+	echo -e "[\033[0;32m+\033[0m] $ARGS"
+}
+
+function notify()
+{
+	ARGS="$@"
+	echo -e "[\033[0;33m*\033[0m] $ARGS"
+}
+
+function failure()
+{
+	ARGS="$@"
+	echo -e "[\033[0;31m-\033[0m] $ARGS"
+}
+
+function main()
+{
+	evalargs $@
+	mountdev
+}
+
+main $@
